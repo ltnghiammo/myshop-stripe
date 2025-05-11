@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Shop</title>
+  <script defer src="shop.js"></script>
+  <script>
+    async function loadProducts() {
+      const res = await fetch("/products");
+      const products = await res.json();
+      const container = document.getElementById("product-list");
+      container.innerHTML = "";
+
+      for (const product of products) {
+        const card = document.createElement("div");
+        card.style.border = "1px solid #ccc";
+        card.style.padding = "20px";
+        card.style.borderRadius = "8px";
+        card.style.margin = "10px";
+        card.style.width = "250px";
+        card.style.display = "inline-block";
+        card.style.verticalAlign = "top";
+        card.style.textAlign = "center";
+
+        card.innerHTML = `
+          <img src="\${product.image}" alt="\${product.name}" style="width:120px;height:120px;object-fit:contain;margin-bottom:10px" />
+          <h2>\${product.name}</h2>
+          <p>\${product.price} USD</p>
+          <p>Stock: \${product.stock}</p>
+          <input type="number" min="1" max="\${product.stock}" value="1" id="qty-\${product._id}" style="width:60px;"/>
+          <button onclick="addToCart('\${product._id}', '\${product.name}', \${product.price}, \${product.stock})" style="background:#22c55e;color:white;border:none;padding:5px 10px;border-radius:4px;margin-top:5px;">Add</button>
+        `;
+
+        container.appendChild(card);
+      }
+    }
+
+    function addToCart(id, name, price, stock) {
+      const qty = parseInt(document.getElementById("qty-" + id).value);
+      const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+      const existing = cart.find(p => p.id === id);
+      if (existing) {
+        existing.quantity += qty;
+      } else {
+        cart.push({ id, name, price, quantity: qty });
+      }
+      localStorage.setItem("cart", JSON.stringify(cart));
+      alert("Added to cart!");
+    }
+
+    window.onload = loadProducts;
+  </script>
+</head>
+<body style="font-family:sans-serif;background:#f7f8fa;margin:30px">
+  <h1>Shop</h1>
+  <div id="product-list"></div>
+  <br/>
+  <a href="cart.html">
+    <button style="background:#3b82f6;color:white;padding:10px 20px;border:none;border-radius:4px;">Go to Cart</button>
+  </a>
+</body>
+</html>
