@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Your Cart</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 40px; background-color: #f9f9f9; }
+    h1 { color: #2c3e50; }
+    .cart-item {
+      background: #fff; padding: 15px; margin-bottom: 10px;
+      border: 1px solid #ccc; border-radius: 5px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .cart-item input { width: 60px; padding: 5px; }
+    .cart-item button {
+      background: #e74c3c; color: #fff; border: none;
+      padding: 6px 10px; border-radius: 4px; cursor: pointer;
+    }
+    .cart-item button:hover { background: #c0392b; }
+    #total { margin-top: 20px; font-size: 20px; font-weight: bold; }
+    #checkout-btn {
+      margin-top: 20px; padding: 10px 20px;
+      background: #27ae60; color: white; border: none;
+      border-radius: 4px; cursor: pointer;
+    }
+    #checkout-btn:hover { background: #1e8449; }
+  </style>
+</head>
+<body>
+  <h1>Your Shopping Cart</h1>
+  <div id="cart-list"></div>
+  <div id="total"></div>
+  <button id="checkout-btn" onclick="checkout()">Proceed to Payment</button>
+
+  <script>
+    let cart = JSON.parse(localStorage.getItem("cart") || "[]");
+
+    async function renderCart() {
+      const res = await fetch("/products");
+      const products = await res.json();
+      const cartList = document.getElementById("cart-list");
+      cartList.innerHTML = "";
+      let total = 0;
+
+      cart.forEach(item => {
+        const product = products.find(p => p._id === item.id);
+        if (!product) return;
+
+        const subtotal = product.price * item.quantity;
+        total += subtotal;
+
+        const div = document.createElement("div");
+        div.className = "cart-item";
+        div.innerHTML = `
+          <div>
+            <strong>${product.name}</strong><br>
+            ${product.price} USD x 
+            <input type="number" value="${item.quantity}" min="1" onchange="updateQty('${item.id}', this.value)">
+          </div>
+          <div>
+            = ${subtotal} USD
+            <button onclick="removeItem('${item.id}')">Remove</button>
+          </div>
+        `;
+        cartList.appendChild(div);
+      });
+
+      document.getElementById("total").textContent = "Total: " + total + " USD";
+    }
+
+    function updateQty(id, qty) {
+      const index = cart.findIndex(i => i.id === id);
+      if (index !== -1) {
+        cart[index].quantity = parseInt(qty);
+        localStorage.setItem("cart", JSON.stringify(cart));
+        renderCart();
+      }
+    }
+
+    function removeItem(id) {
+      cart = cart.filter(i => i.id !== id);
+      localStorage.setItem("cart", JSON.stringify(cart));
+      renderCart();
+    }
+
+    async function checkout() {
+      const res = await fetch("/create-checkout-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: cart })
+      });
+      const data = await res.json();
+      window.location.href = data.url;
+    }
+
+    renderCart();
+  </script>
+</body>
+</html>

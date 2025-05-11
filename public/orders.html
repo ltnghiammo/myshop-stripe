@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Orders</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-6">
+  <h1 class="text-3xl font-bold mb-6">My Orders</h1>
+  <div id="order-list" class="space-y-6"></div>
+
+  <script>
+    async function fetchOrders() {
+      const res = await fetch("/orders");
+      const orders = await res.json();
+      const container = document.getElementById("order-list");
+      if (!Array.isArray(orders) || orders.length === 0) {
+        container.innerHTML = "<p class='text-gray-600'>You haven't placed any orders yet.</p>";
+        return;
+      }
+
+      orders.forEach(order => {
+        const items = order.items.map(i =>
+          `<li class="ml-4">- ${i.name} – ${i.price} USD x ${i.quantity}</li>`
+        ).join("");
+        container.innerHTML += `
+          <div class="bg-white p-4 rounded shadow">
+            <div><strong>Date:</strong> ${new Date(order.createdAt).toLocaleString()}</div>
+            <ul class="my-2">${items}</ul>
+            <div class="font-bold">Total: ${order.total} USD</div>
+          </div>
+        `;
+      });
+    }
+
+    fetchOrders();
+  </script>
+</body>
+</html>

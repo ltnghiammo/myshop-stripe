@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Dashboard - Product Management</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 40px; background-color: #f9f9f9; }
+    h1 { color: #333; margin-bottom: 20px; }
+    form, .filters { margin-bottom: 20px; }
+    input, select, button {
+      padding: 10px; margin: 5px; border: 1px solid #ccc; border-radius: 4px;
+    }
+    button { background-color: #3498db; color: white; cursor: pointer; }
+    button:hover { background-color: #2980b9; }
+    .product-list { list-style-type: none; padding: 0; }
+    .product-item {
+      background-color: #fff; margin-bottom: 10px; padding: 15px;
+      border: 1px solid #ddd; border-radius: 4px;
+    }
+    .product-item strong { display: block; margin-bottom: 5px; }
+    .pagination { margin-top: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Admin: Product Management</h1>
+  <form id="product-form">
+    <input type="text" id="name" placeholder="Product name" required />
+    <input type="number" id="price" placeholder="Price (USD)" required />
+    <input type="number" id="stock" placeholder="Stock quantity" required />
+    <input type="text" id="category" placeholder="Category" required />
+    <button type="submit">Add Product</button>
+  </form>
+  <div class="filters">
+    <input type="text" id="search" placeholder="Search by name..." />
+    <select id="filter-category"><option value="">All Categories</option></select>
+  </div>
+  <ul id="product-list" class="product-list"></ul>
+  <div class="pagination">
+    <button onclick="prevPage()">Prev</button>
+    <span id="page-info"></span>
+    <button onclick="nextPage()">Next</button>
+  </div>
+  <script>
+    let allProducts = [], currentPage = 1, perPage = 5;
+
+    async function fetchProducts() {
+      const res = await fetch("/products");
+      allProducts = await res.json();
+      populateCategories();
+      renderProducts();
+    }
+
+    function populateCategories() {
+      const cats = [...new Set(allProducts.map(p => p.category))];
+      const f = document.getElementById("filter-category");
+      f.innerHTML = '<option value="">All Categories</option>';
+      cats.forEach(c => {
+        const o = document.createElement("option");
+        o.value = c; o.textContent = c;
+        f.appendChild(o);
+      });
+    }
+
+    function renderProducts() {
+      const list = document.getElementById("product-list");
+      list.innerHTML = "";
+      const search = document.getElementById("search").value.toLowerCase();
+      const category = document.getElementById("filter-category").value;
+      let filtered = allProducts.filter(p =>
+        p.name.toLowerCase().includes(search) &&
+        (category ? p.category === category : true)
+      );
+      const totalPages = Math.ceil(filtered.length / perPage);
+      if (currentPage > totalPages) currentPage = totalPages;
+      if (currentPage < 1) currentPage = 1;
+      const start = (currentPage - 1) * perPage;
+      const paginated = filtered.slice(start, start + perPage);
+      document.getElementById("page-info").textContent = `Page ${currentPage} of ${totalPages || 1}`;
+      paginated.forEach(p => {
+        const li = document.createElement("li");
+        li.className = "product-item";
+        li.innerHTML = `<strong>${p.name}</strong>${p.price} USD - Stock: ${p.stock} - Category: ${p.category}
+        <br><button onclick="deleteProduct('${p._id}')">Delete</button>`;
+        list.appendChild(li);
+      });
+    }
+
+    async function deleteProduct(id) {
+      await fetch("/products/" + id, { method: "DELETE" });
+      fetchProducts();
+    }
+
+    function prevPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        renderProducts();
+      }
+    }
+
+    function nextPage() {
+      const total = Math.ceil(allProducts.length / perPage);
+      if (currentPage < total) {
+        currentPage++;
+        renderProducts();
+      }
+    }
+
+    document.getElementById("search").addEventListener("input", () => {
+      currentPage = 1;
+      renderProducts();
+    });
+
+    document.getElementById("filter-category").addEventListener("change", () => {
+      currentPage = 1;
+      renderProducts();
+    });
+
+    document.getElementById("product-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("name").value;
+      const price = parseInt(document.getElementById("price").value);
+      const stock = parseInt(document.getElementById("stock").value);
+      const category = document.getElementById("category").value;
+      await fetch("/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, price, stock, category })
+      });
+      fetchProducts();
+      e.target.reset();
+    });
+
+    fetchProducts();
+  </script>
+</body>
+</html>
